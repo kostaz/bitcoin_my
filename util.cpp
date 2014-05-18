@@ -4,8 +4,11 @@
 #include <string>
 #include <boost/regex.hpp>
 #include <boost/foreach.hpp>
+#include <boost/filesystem.hpp>
 #include <stdarg.h>
+
 #include "util.h"
+#include "chainparams.h"
 
 using namespace std;
 
@@ -43,6 +46,16 @@ bool GetBoolArg(const string& argName, bool fDefault)
 
 	int n = atoi(argVal.c_str());
 	return n != 0;
+}
+
+const boost::filesystem::path& GetDataDir(bool fNetSpecific)
+{
+	int nNet = CChainParams::MAX_NETWORK_TYPES;
+
+	if (fNetSpecific)
+	{
+		nNet = Params().NetworkID();
+	}
 }
 
 void DumpMap(const map<string, string>& map)
