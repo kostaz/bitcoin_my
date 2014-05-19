@@ -1,4 +1,6 @@
+#include <assert.h>
 #include "chainparams.h"
+#include "util.h"
 
 class CMainParams : public CChainParams
 {
@@ -62,5 +64,49 @@ static CChainParams *pCurrentParams = &mainParams;
 const CChainParams& Params()
 {
 	return *pCurrentParams;
+}
+
+void SelectParams(CChainParams::Network network)
+{
+	switch (network)
+	{
+	case CChainParams::MAIN:
+		pCurrentParams = &mainParams;
+		break;
+	case CChainParams::TESTNET:
+		pCurrentParams = &testNetParams;
+		break;
+	case CChainParams::REGTEST:
+		pCurrentParams = &regTestParams;
+		break;
+	defaul:
+		assert(false && "Unimplemented network!");
+	}
+}
+
+bool SelectParamsFromCommandLine()
+{
+	bool regTest = GetBoolArg("-regtest", false);
+	bool testNet = GetBoolArg("-testnet", false);
+
+	if (regTest && testNet)
+	{
+		return false;
+	}
+
+	if (regTest)
+	{
+		SelectParams(CChainParams::REGTEST);
+	}
+	else if (testNet)
+	{
+		SelectParams(CChainParams::TESTNET);
+	}
+	else
+	{
+		SelectParams(CChainParams::MAIN);
+	}
+
+	return true;
 }
 

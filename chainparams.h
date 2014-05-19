@@ -35,5 +35,8 @@ protected:
 
 const CChainParams& Params();
 
+void SelectParams(CChainParams::Network network);
+bool SelectParamsFromCommandLine();
+
 #endif // BITCOIN_CHAIN_PARAMS_H
 

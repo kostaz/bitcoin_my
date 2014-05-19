@@ -5,6 +5,9 @@
 #include <boost/regex.hpp>
 #include <boost/foreach.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/program_options/detail/config_file.hpp>
+#include <boost/program_options/parsers.hpp>
 #include <stdarg.h>
 
 #include "util.h"
@@ -48,7 +51,29 @@ bool GetBoolArg(const string& argName, bool fDefault)
 	return n != 0;
 }
 
-const boost::filesystem::path& GetDataDir(bool fNetSpecific)
+namespace fs = boost::filesystem;
+
+fs::path GetDefaultDataDir()
+{
+	fs::path dir;
+
+	char* home = getenv("HOME");
+
+	if (!home || strlen(home) == 0)
+	{
+		dir = fs::path("/");
+	}
+	else
+	{
+		dir = fs::path(home);
+	}
+
+	return dir / ".bitcoin";
+}
+
+static fs::path pathCached[CChainParams::MAX_NETWORK_TYPES + 1];
+
+const fs::path& GetDataDir(bool fNetSpecific)
 {
 	int nNet = CChainParams::MAX_NETWORK_TYPES;
 
@@ -56,6 +81,81 @@ const boost::filesystem::path& GetDataDir(bool fNetSpecific)
 	{
 		nNet = Params().NetworkID();
 	}
+
+	fs::path &path = pathCached[nNet];
+
+	if (!path.empty())
+	{
+		return path;
+	}
+
+	if (mapArgs.count("-datadir"))
+	{
+		path = fs::system_complete(mapArgs["-datadir"]);
+		if (!fs::is_directory(path))
+		{
+			path = "";
+		}
+	}
+	else
+	{
+		path = GetDefaultDataDir();
+	}
+
+	return path;
+}
+
+void ClearDataDirCache()
+{
+	fs::path* first = &pathCached[0];
+	fs::path* last  = &pathCached[CChainParams::MAX_NETWORK_TYPES + 1];
+
+	fill(first, last, fs::path());
+}
+
+fs::path GetConfigFile()
+{
+	string configFileStr = GetArg("-conf", "bitcoin.conf");
+	fs::path configFile(configFileStr);
+
+	if (!configFile.is_complete())
+	{
+		configFile = GetDataDir(false) / configFile;
+	}
+
+	return configFile;
+}
+
+void ReadConfigFile(map<string, string>& mapSettingsReg,
+		    map<string, vector<string> >& mapMultiSettingsReg)
+{
+	fs::path file = GetConfigFile();
+
+	fs::ifstream streamConfig(file);
+
+	if (!streamConfig.good())
+	{
+		cout << "Config file " << file << " doesn't exist!" << endl;
+		return;
+	}
+
+	set<string> setOptions;
+	setOptions.insert("*");
+
+	for (boost::program_options::detail::config_file_iterator
+	     it(streamConfig, setOptions), end; it != end; ++it)
+	{
+		string key = string("-") + it->string_key;
+		if (mapSettingsReg.count(key) == 0)
+		{
+			mapSettingsReg[key] = it->value[0];
+			InterpretNegativeSettings(key, mapSettingsReg);
+		}
+
+		mapMultiSettingsReg[key].push_back(it->value[0]);
+	}
+
+	ClearDataDirCache();
 }
 
 void DumpMap(const map<string, string>& map)
@@ -122,5 +222,15 @@ void ParseParameters(int argc, const char* const argv[])
 
 		InterpretNegativeSettings(name, mapArgs);
 	}
+}
+
+string GetArg(const string& arg, const string& argDefault)
+{
+	if (mapArgs.count(arg))
+	{
+		return mapArgs[arg];
+	}
+
+	return argDefault;
 }
 
