@@ -6,8 +6,15 @@
 #include <vector>
 #include <utility>
 #include <boost/filesystem.hpp>
+#include <boost/thread.hpp>
 
 using namespace std;
+
+inline void MilliSleep(int64_t n)
+{
+	// boost::this_thread::sleep_for(boost::chrono::milliseconds(n));
+	boost::this_thread::sleep(boost::posix_time::milliseconds(n));
+}
 
 extern std::map<string, string> mapArgs;
 extern std::map<string, vector<string> > mapMultiArgs;
@@ -21,7 +28,14 @@ const boost::filesystem::path& GetDataDir(bool fNetSpecific = true);
 void ReadConfigFile(map<string, string>& mapSettingsReg,
 		    map<string, vector<string> >& mapMultiSettingsReg);
 
+inline bool IsSwitchChar(char c)
+{
+	return c == '-';
+}
+
 bool GetBoolArg(const string& argName, bool fDefault);
+bool SoftSetArg(const string& arg, const string& val);
+bool SoftSetBoolArg(const string& arg, bool set);
 string GetArg(const string& arg, const string& argDefault);
 
 #endif // BITCOIN_UTIL_H

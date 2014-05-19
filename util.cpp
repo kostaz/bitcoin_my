@@ -51,6 +51,29 @@ bool GetBoolArg(const string& argName, bool fDefault)
 	return n != 0;
 }
 
+bool SoftSetArg(const string& arg, const string& val)
+{
+	if (mapArgs.count(arg))
+	{
+		return false;
+	}
+
+	mapArgs[arg] = val;
+	return true;
+}
+
+bool SoftSetBoolArg(const string& arg, bool set)
+{
+	if (set)
+	{
+		return SoftSetArg(arg, string("1"));
+	}
+	else
+	{
+		return SoftSetArg(arg, string("0"));
+	}
+}
+
 namespace fs = boost::filesystem;
 
 fs::path GetDefaultDataDir()
